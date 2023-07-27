@@ -1,0 +1,18 @@
+{
+  "manifest_version": 2,
+  "name": "Amazon-Sort",
+  "version": "7",
+
+  "description": "Automate grouping of search results, filter results to match your search words, then sort results by price or price per count.",
+
+  "icons": {
+    "48": "./img/amazon-sort-48.jpg"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["https://www.amazon.com/s*"],
+      "js": ["./src/amazon-sort.js"]
+    }
+  ]
+}
