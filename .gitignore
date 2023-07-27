@@ -5,7 +5,8 @@ versions/
 index.html
 package.json
 prod.js
-sprite_a.pngbuild/Release
+sprite_a.png
+build/Release
 .npm
 .next
 out
