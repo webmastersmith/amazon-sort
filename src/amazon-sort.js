@@ -1,10 +1,8 @@
 // about:debugging#/runtime/this-firefox
 // chrome://extensions/
 // https://codebeautify.org/minify-js#
-// show page your search is currently on: const urlParams = new URLSearchParams(window.location.search)
-// urlParams.get('page') // "7"
 (async function () {
-  // only run function if amazon search page.
+  // only run function if https address is amazon search page.
   if (/amazon.*\/s\?/i.test(location.href)) {
     function getKeyword() {
       try {
@@ -308,30 +306,6 @@
         return { form: null, checkbox: null, searchInput: null, checkboxSort: null, startPageSpan: null };
       }
     }
-    function loopText() {
-      try {
-        const wrapper = document.createElement('div');
-        wrapper.id = 'amazon-sort-loading-wrapper';
-        const feedback = document.createElement('p');
-        feedback.className = 'filterResults';
-        wrapper.appendChild(feedback);
-        // spinner
-        const ring = document.createElement('div');
-        ring.className = 'amazon-sort-lds-ring';
-        const ringSegment1 = document.createElement('div');
-        const ringSegment2 = document.createElement('div');
-        const ringSegment3 = document.createElement('div');
-        const ringSegment4 = document.createElement('div');
-        ring.appendChild(ringSegment1);
-        ring.appendChild(ringSegment2);
-        ring.appendChild(ringSegment3);
-        ring.appendChild(ringSegment4);
-        wrapper.appendChild(ring);
-        return { feedback, wrapper };
-      } catch (e) {
-        console.log(e);
-      }
-    }
 
     // create the script tags.
     const keyword = getKeyword();
@@ -346,32 +320,35 @@
     if (!form) throw new Error('Could not create form.');
     // Insert Form
     parent.insertBefore(form, parent.firstChild);
-    // all code inside this function.
+
+    // The Main Logic. All code inside this function.
     async function amazonFilterSort() {
-      // button clicked, remove it.
+      // form button clicked, remove form from page.
       form.remove();
       let items = [];
-      // values from input box
+      // Raw JS handles already exist. Get values from the form.
       const filterItems = checkbox.checked; // true is filter
       const pages = +searchInput.value || 5;
       const sortByPricePerCount = checkboxSort.checked;
-      // console.log(filterItems, pages, sortByPricePerCount);
 
-      // Get Items from page.
       async function getItems(pageNumber) {
         let itemArr = [];
         return new Promise((res, rej) => {
+          // wait for page to go idle(everything has downloaded), before add items to memory.
           window.requestIdleCallback(
             () => {
               try {
+                // items can be two different classes. Try this one first.
                 itemArr = [...document.querySelectorAll('.s-asin[data-cel-widget*=search_result]')];
                 console.log(`Page ${pageNumber} first query match:  ${itemArr.length}`);
+                // check if 'itemArr' has anything in it, if not, try the other classes.
                 if (itemArr.length < 1) {
                   itemArr = [...document.querySelectorAll('.s-asin > div.sg-col-inner')];
                   console.log(`Page ${pageNumber} second query match:  ${itemArr.length}`);
                 }
+                if (itemArr < 1) console.log('Could not get any items :-(');
               } catch (e) {}
-              // add to items array.
+              // add to the new page items to memory array.
               itemArr.forEach((el) => {
                 items.push(el);
               });
@@ -382,61 +359,36 @@
         });
       } // end getItems()
 
-      // sort the items by price
-      function mySort(newItems) {
-        // add pagination button back into page after removing unwanted results.
-        let pagination = '';
+      // Display the page currently loading.
+      function loopText() {
         try {
-          pagination = document.querySelector(
-            'div.s-main-slot div[cel_widget_id^="MAIN-PAGINATION"]'
-          ).parentNode;
+          const loadingPageWrapper = document.createElement('div');
+          loadingPageWrapper.id = 'amazon-sort-loading-wrapper';
+          const loadingPageEl = document.createElement('p');
+          loadingPageEl.className = 'filterResults';
+          loadingPageWrapper.appendChild(loadingPageEl);
+          // spinner
+          const ring = document.createElement('div');
+          ring.className = 'amazon-sort-lds-ring';
+          const ringSegment1 = document.createElement('div');
+          const ringSegment2 = document.createElement('div');
+          const ringSegment3 = document.createElement('div');
+          const ringSegment4 = document.createElement('div');
+          ring.appendChild(ringSegment1);
+          ring.appendChild(ringSegment2);
+          ring.appendChild(ringSegment3);
+          ring.appendChild(ringSegment4);
+          loadingPageWrapper.appendChild(ring);
+          return { loadingPageEl, loadingPageWrapper };
         } catch (e) {
-          // do nothing
+          console.log(e);
         }
-        // sort newItems in-place.
-        newItems.sort((elemA, elemB) => {
-          let a = 0,
-            b = 0;
-          // sort by price per count?
-          if (sortByPricePerCount) {
-            a = parseFloat(elemA.dataset.pricepercount);
-            b = parseFloat(elemB.dataset.pricepercount);
-            // console.log(a, b);
-            // sort by price
-          } else {
-            a = +elemA.dataset.price;
-            b = +elemB.dataset.price;
-          }
-          // console.log(a, b);
-          return a < b ? -1 : a > b ? 1 : 0;
-        });
-
-        // create Total Result element
-        const p = document.createElement('p');
-        p.innerText = `Total Search Result: ${newItems.length}`;
-        p.className = 'filterResults';
-        // console.log('Total Results: ', newItems.length);
-
-        // add sorted newItems to page.
-        return [p, ...newItems, pagination];
-        // console.log('after pagination', items);
       }
-      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-      // click page and wait for page to load.
-      async function clickPage(pageNumber) {
-        try {
-          document.querySelector(`span.s-pagination-strip > a.s-pagination-next`).click();
-          await sleep(2000);
-        } catch (e) {
-          return false;
-        }
-        return true;
-      }
       // check title and Price
       async function checkTitlePrice(nodes) {
         // get title
-        return nodes.reduce((acc, el, idx) => {
+        const elArr = nodes.reduce((acc, el, idx) => {
           let title = '';
           let price = 0;
           let pricePerCount = 0;
@@ -446,6 +398,7 @@
             if (!title) return acc;
             price = +el.querySelector('span.a-price-whole').innerText.replaceAll(/\W+/g, '') || 0;
             if (!price) return acc;
+
             pricePerCount = price;
 
             // set price per count if it exist
@@ -462,13 +415,11 @@
             el.setAttribute('data-pricepercount', pricePerCount);
 
             // check title if filterItems = true.
-            // console.log('filter: ', filterItems);
             if (filterItems && keyword.length > 0) {
               if (keyword.every((key) => title.includes(key))) {
                 // el.setAttribute('data-title', title);
                 el.setAttribute('data-price', price);
                 acc.push(el);
-                // console.log(acc);
                 return acc;
               }
               return acc;
@@ -481,6 +432,38 @@
             return acc;
           }
         }, []);
+        return elArr;
+      }
+
+      // sort the items by price
+      function priceSort(newItems) {
+        // sort newItems in-place.
+        newItems.sort((elemA, elemB) => {
+          let a = 0,
+            b = 0;
+          // sort by price per count?
+          if (sortByPricePerCount) {
+            a = parseFloat(elemA.dataset.pricepercount);
+            b = parseFloat(elemB.dataset.pricepercount);
+            // sort by price
+          } else {
+            a = +elemA.dataset.price;
+            b = +elemB.dataset.price;
+          }
+          return a < b ? -1 : a > b ? 1 : 0;
+        });
+        return newItems;
+      }
+
+      // click page and wait for page to load.
+      async function clickPage(pageNumber) {
+        try {
+          document.querySelector(`span.s-pagination-strip > a.s-pagination-next`).click();
+          await sleep(2000);
+        } catch (e) {
+          return false;
+        }
+        return true;
       }
 
       async function replaceParentItems(newItems) {
@@ -495,13 +478,17 @@
 
         return;
       }
-      // loop through pages
-      const { feedback, wrapper } = loopText();
 
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      // Create the Loading Page Element.
+      const { loadingPageEl, loadingPageWrapper } = loopText();
+
+      // START
+      // Loop through pages, add items to memory.
       for (let i = 1; i <= pages; i++) {
-        // create feedback
-        feedback.innerText = `Page ${i} of ${pages} loading`;
-        parent.insertBefore(wrapper, parent.firstChild);
+        // display the page thats currently loading.
+        loadingPageEl.innerText = `Page ${i} of ${pages} loading`;
+        parent.insertBefore(loadingPageWrapper, parent.firstChild);
 
         // start the process
         await getItems(i);
@@ -512,10 +499,27 @@
           if (exist === false) break;
         }
       }
-      wrapper.remove();
+      // Remove the 'Page loading' div.
+      loadingPageWrapper.remove();
+      // Items from all pages are in memory. Filter, Sort, Display.
       const filteredItems = await checkTitlePrice(items);
-      const sortedItems = mySort(filteredItems);
-      await replaceParentItems(sortedItems);
+      // Get pagination button.
+      let pagination = '';
+      try {
+        pagination = document.querySelector(
+          'div.s-main-slot div[cel_widget_id^="MAIN-PAGINATION"]'
+        ).parentNode;
+      } catch (e) {
+        // do nothing
+      }
+      // Sort Items.
+      const sortedItems = priceSort(filteredItems);
+      // create Total Result element
+      const totalResultsEl = document.createElement('p');
+      totalResultsEl.innerText = `Total Search Result: ${sortedItems.length}`;
+      totalResultsEl.className = 'filterResults';
+      // Remove all Items and replace with items in memory.
+      await replaceParentItems([totalResultsEl, ...sortedItems, pagination]);
     } // end amazonFilterSort()
   } // end if
 })();
