@@ -17,11 +17,8 @@
     // Create form and content
     const { form, checkboxFilter, searchInput, checkboxSort, startPageSpan } = createForm(amazonFilterSort);
     if (!form) throw new Error('Could not create form.');
-    // get parent node.
-    function getParent(doc) {
-      return doc.querySelector('div[id*=skipLinkTargetForMainSearchResults] + span');
-    }
-    const parent = getParent(document);
+    // Get parent element. -grid container with all search results.
+    const parent = document.querySelector('div[id*=skipLinkTargetForMainSearchResults] + span > div');
     if (!parent) throw new Error('Could not get Parent node.');
     // Insert Form
     parent.insertBefore(form, parent.firstChild);
@@ -62,7 +59,7 @@
       loadingPageWrapper.remove();
       // Sort Items.
       const sortedItems = priceSort(items.flat(), sortByPricePerCount ? 'pricePerCount' : 'price');
-      // create Total Result element w/ styling
+      // create Total Search Result element w/ styling
       const finalEl = finalResultEl(sortedItems);
       // Get pagination w/ styling
       const paginationEl = getPagination();
@@ -86,10 +83,8 @@
         items.forEach((item) => {
           parent.appendChild(item);
         });
-
         return;
       }
-
       // get items
       function getItems(isFilter) {
         // keywords and item.title have all been lowerCased.
