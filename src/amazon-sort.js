@@ -28,15 +28,14 @@
       // All Valid Items HERE.
       const items = [];
       // Create the Loading Page Element.
-      // const parent = getParent(document);
       const { loadingPageEl, loadingPageWrapper } = loopText();
 
-      // form button clicked, remove form from page.
-      form.remove();
-      // Raw JS handles already exist. Get values from the form.
+      // Get values from the form.
       const filterTitle = checkboxFilter.checked; // true is filter
       const pages = +searchInput.value || 5;
       const sortByPricePerCount = checkboxSort.checked;
+      // remove form from page after submit.
+      form.remove();
 
       // START -Loop through pages, add items to memory.
       for (let i = 1; i <= pages; i++) {

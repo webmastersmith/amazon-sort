@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Amazon-Sort",
-  "version": "7",
+  "version": "8",
 
   "description": "Automate grouping of search results, filter results to match your search words, then sort results by price or price per count.",
 
