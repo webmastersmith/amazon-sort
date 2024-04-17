@@ -150,8 +150,6 @@
       function getPagination() {
         const pagination = document.querySelector('div[class*=pagination-container]');
         pagination.style.marginTop = '2rem';
-        pagination.style.clear = 'both';
-        pagination.style.display = 'flex';
         return pagination;
       }
       // Display the page currently loading.
