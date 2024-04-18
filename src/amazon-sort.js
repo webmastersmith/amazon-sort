@@ -36,22 +36,33 @@
       const sortByPricePerCount = checkboxSort.checked;
       // remove form from page after submit.
       form.remove();
+      parent.insertBefore(loadingPageWrapper, parent.firstChild);
 
       // START -Loop through pages, add items to memory.
       for (let i = 1; i <= pages; i++) {
         // display the page thats currently loading.
         loadingPageEl.innerText = `Page ${i} of ${pages} loading`;
-        parent.insertBefore(loadingPageWrapper, parent.firstChild);
 
-        items.push(getItems(filterTitle));
-        // click next page
+        // pause for idle
+        await new Promise((res, rej) => {
+          window.requestIdleCallback(
+            () => {
+              items.push(getItems(filterTitle));
+              res();
+            },
+            { timeout: 5000 }
+          );
+        });
+
+        // click next page - wait till pagination container selector loads for slow internet.
+        await waitForSelector('div[class*=pagination-container]');
         const nextBtn = document.querySelector('a[class*=pagination-next]');
         // if next page doesn't exist, don't click.
         if (!nextBtn) break;
         // don't click last page
         if (i < pages) {
           nextBtn.click();
-          await sleep(3000);
+          await sleep(2000);
         }
       } // end for loop
       // Remove the 'Page loading' div.
@@ -69,7 +80,9 @@
 
       // FUNCTIONS ----------------------------------------------------------------------------
       function priceSort(itemArr, key) {
-        const blob = itemArr.toSorted((a, b) => a[key] - b[key]);
+        // if key is 'pricePerCount', remove items with '0' pricePerCount value.
+        const items = key === 'pricePerCount' ? itemArr.filter((item) => item.pricePerCount > 0) : itemArr;
+        const blob = items.toSorted((a, b) => a[key] - b[key]);
         return blob.map((item) => item.el);
       }
 
@@ -84,7 +97,7 @@
         });
         return;
       }
-      // get items
+      // get items -isFilter = should you filter title for search words?
       function getItems(isFilter) {
         // keywords and item.title have all been lowerCased.
         return [...document.querySelectorAll('div[class*=main-slot] div[data-uuid]')]
@@ -135,6 +148,32 @@
           isValid,
         };
       }
+      function waitForSelector(selector) {
+        return new Promise((resolve) => {
+          // check if exist from start.
+          if (document.querySelector(selector)) {
+            return resolve(document.querySelector(selector));
+          }
+          const observer = new MutationObserver((mutations) => {
+            if (document.querySelector(selector)) {
+              observer.disconnect();
+              resolve(document.querySelector(selector));
+            }
+          });
+          observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+          });
+        });
+      }
+      await waitForSelector('#transactionFlyoutContainer');
+
+      // save pagination element
+      function getPagination() {
+        const pagination = document.querySelector('div[class*=pagination-container]');
+        pagination.style.marginTop = '2rem';
+        return pagination;
+      }
 
       // VIEW -------------------------------------------------------------------------
       function finalResultEl(arr) {
@@ -145,12 +184,6 @@
         totalResultsP.className = 'filterResults';
         totalResultsEl.appendChild(totalResultsP);
         return totalResultsEl;
-      }
-      // save pagination element
-      function getPagination() {
-        const pagination = document.querySelector('div[class*=pagination-container]');
-        pagination.style.marginTop = '2rem';
-        return pagination;
       }
       // Display the page currently loading.
       function loopText() {
