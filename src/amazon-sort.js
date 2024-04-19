@@ -166,7 +166,6 @@
           });
         });
       }
-      await waitForSelector('#transactionFlyoutContainer');
 
       // save pagination element
       function getPagination() {
