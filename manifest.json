@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Amazon-Sort",
-  "version": "9",
+  "version": "11",
 
   "description": "Automate grouping of search results, filter results to match your search words, then sort results by price or price per count.",
 
@@ -11,7 +11,7 @@
 
   "content_scripts": [
     {
-      "matches": ["https://www.amazon.com/s*"],
+      "matches": ["https://www.amazon.com/s*", "https://www.amazon.ca/s*"],
       "js": ["./src/amazon-sort.js"]
     }
   ]
