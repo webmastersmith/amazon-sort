@@ -1,9 +1,5 @@
 // about:debugging#/runtime/this-firefox
 // chrome://extensions/
-// https://codebeautify.org/minify-js#
-// Start: get 'parent' children, extract info and attach as object.
-// loop through pages.
-// filter, sort, remove old children, replace with new children.
 (async function () {
   // only run function if https address is amazon search page.
   if (/amazon.*\/s\?/i.test(location.href)) {
@@ -19,9 +15,8 @@
     if (!form) throw new Error('Could not create form.');
 
     // Hook into Amazon page elements.
-    // Top Level.
-    const mainDiv = document.getElementById('search');
-    // const mainDiv = document.querySelector('div[id*=skipLinkTargetForMainSearchResults]').parentElement;
+    // Top Level -before sidebar.
+    const mainTopDiv = document.getElementById('search');
     // Get parent element. -grid container with all search results.
     const parent = document.querySelector('div[id*=skipLinkTargetForMainSearchResults] + span > div');
     if (!parent) throw new Error('Could not get Parent node.');
@@ -36,7 +31,7 @@
       const { loadingPageEl, loadingPageWrapper } = loopText();
 
       // Get values from the form.
-      const filterTitle = checkboxFilter.checked; // true is filter
+      const filterTitle = checkboxFilter.checked; // checked = true // filter results.
       const pages = +searchInput.value || 5;
       const sortByPricePerCount = checkboxSort.checked;
       // remove form from page after submit.
@@ -74,22 +69,19 @@
       loadingPageWrapper.remove();
       // Sort Items.
       const sortedItems = priceSort(items.flat(), sortByPricePerCount ? 'pricePerCount' : 'price');
-      // create Total Search Result element w/ styling
-      const finalEl = finalResultEl(sortedItems);
-      // Get pagination w/ styling
-      // const paginationEl = getPagination();
-      // insert results in special div before 'mainDiv'. -because amazon dynamically removes/inserts results.
-      const sortResultDiv = sortResultsBox();
+      // Create 'Container' div to insert results.
+      // Because Amazon dynamically removes/inserts results, div is placed out of Amazon scope.
+      const containerDiv = sortResultsBox();
       // append to page.
-      mainDiv.before(sortResultDiv);
-      // Remove all Items and replace with items in memory.
-      sortResultDiv.appendChild(finalEl);
-      insertItems(sortResultDiv, sortedItems);
-      sortResultDiv.after(endMessage());
-      // sortResultDiv.after(paginationEl);
-      // await replaceParentItems(parent, sortedItems);
-      // parent.before(finalEl);
-      // parent.after(paginationEl);
+      mainTopDiv.before(containerDiv);
+      // Create 'Total Search Result' element.
+      const headerText = getHeader(sortedItems.length);
+      // Add header.
+      containerDiv.appendChild(headerText);
+      // Add the 'search result' items.
+      insertItems(containerDiv, sortedItems);
+      // Add footer.
+      containerDiv.after(getFooter());
 
       // FUNCTIONS ----------------------------------------------------------------------------
       function priceSort(itemArr, key) {
@@ -101,35 +93,24 @@
 
       // append items to page.
       function insertItems(parent, items) {
-        // // clear parent
-        // while (parent.firstChild) {
-        //   parent.removeChild(parent.lastChild);
-        // }
-        // add items back
         items.forEach((item) => {
           parent.appendChild(item);
         });
         return;
       }
-      // get items -isFilter = should you filter title for search words?
+
+      // Filter results.
+      // isFilter = should you filter title for search words?
       function getItems(isFilter) {
         // keywords and item.title have all been lowerCased.
         return [...document.querySelectorAll('div[class*=main-slot] div[data-uuid]')]
           .map((item) => extractListingFromItem(item))
           .filter((item) => item.isValid)
           .filter((item) => (isFilter ? keywords.every((key) => item.title.includes(key)) : true));
-
-        // const boxes = [...document.querySelectorAll('div[class*=main-slot] div[data-uuid]')];
-        // console.log('boxes', boxes);
-        // const tempMap = boxes.map((item) => extractListingFromItem(item));
-        // console.log('tempMap', tempMap);
-        // const tempFilter = tempMap.filter((item) => item.isValid);
-        // console.log('tempfilter', tempFilter);
-        // const tempKeyword = tempFilter.filter((item) => keyword.every((key) => item.title.includes(key)));
-        // console.log('tempKeyword', tempKeyword);
-        // return tempKeyword;
       }
 
+      // process each search result.
+      // a copy of each element is made to remove dynamic links and customize.
       function extractListingFromItem(elTemp) {
         // clone node so original results still show.
         const el = elTemp.cloneNode(true);
@@ -138,7 +119,9 @@
         const wrapper = el.querySelector('div span > div > div.a-section');
         // wrapper could be null.
         if (wrapper) {
+          // Because search results are removed from page flow, custom styling has to be added.
           let parent = wrapper;
+          // ChildNodes can be 1, 2, or 3 children.
           // if children.length === 1, children are nested in a div.
           if (wrapper.childNodes.length === 1) parent = wrapper.querySelector('div');
           parent.style.display = 'flex';
@@ -162,7 +145,7 @@
               if (i === 1) el.style.flexBasis = 'auto';
             });
           }
-        }
+        } // end childNode styling.
 
         // Title
         const title = el.querySelector('h2')?.innerText?.trim()?.toLowerCase();
@@ -186,9 +169,6 @@
         if (el.style.display === 'none') isValid = false;
         // Hidden ad's have no 'data-component-id'
         if (el.classList.contains('AdHolder')) isValid = false;
-        // price and pricePerCount is in hundreds.
-        // const dEl = document.createElement('div');
-        // dEl.appendChild(el.cloneNode(true));
         return {
           el,
           title,
@@ -230,18 +210,18 @@
         // sortResultsEl.style.marginBottom = '2rem';
         return sortResultsEl;
       }
-      function finalResultEl(arr) {
+      function getHeader(length) {
         const totalResultsEl = document.createElement('div');
         totalResultsEl.style.marginBottom = '2rem';
         totalResultsEl.style.marginTop = '2rem';
         totalResultsEl.style.textAlign = 'center';
         const totalResultsP = document.createElement('p');
-        totalResultsP.innerText = `Total Search Result: ${arr.length}`;
+        totalResultsP.innerText = `Total Search Result: ${length}`;
         totalResultsP.className = 'filterResults';
         totalResultsEl.appendChild(totalResultsP);
         return totalResultsEl;
       }
-      function endMessage() {
+      function getFooter() {
         const endMessageDiv = document.createElement('div');
         // create end message.
         const P1 = document.createElement('p');
