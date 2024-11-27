@@ -17,6 +17,11 @@
     // Create form and content
     const { form, checkboxFilter, searchInput, checkboxSort, startPageSpan } = createForm(amazonFilterSort);
     if (!form) throw new Error('Could not create form.');
+
+    // Hook into Amazon page elements.
+    // Top Level.
+    const mainDiv = document.getElementById('search');
+    // const mainDiv = document.querySelector('div[id*=skipLinkTargetForMainSearchResults]').parentElement;
     // Get parent element. -grid container with all search results.
     const parent = document.querySelector('div[id*=skipLinkTargetForMainSearchResults] + span > div');
     if (!parent) throw new Error('Could not get Parent node.');
@@ -72,11 +77,19 @@
       // create Total Search Result element w/ styling
       const finalEl = finalResultEl(sortedItems);
       // Get pagination w/ styling
-      const paginationEl = getPagination();
+      // const paginationEl = getPagination();
+      // insert results in special div before 'mainDiv'. -because amazon dynamically removes/inserts results.
+      const sortResultDiv = sortResultsBox();
+      // append to page.
+      mainDiv.before(sortResultDiv);
       // Remove all Items and replace with items in memory.
-      await replaceParentItems(parent, sortedItems);
-      parent.before(finalEl);
-      parent.after(paginationEl);
+      sortResultDiv.appendChild(finalEl);
+      insertItems(sortResultDiv, sortedItems);
+      sortResultDiv.after(endMessage());
+      // sortResultDiv.after(paginationEl);
+      // await replaceParentItems(parent, sortedItems);
+      // parent.before(finalEl);
+      // parent.after(paginationEl);
 
       // FUNCTIONS ----------------------------------------------------------------------------
       function priceSort(itemArr, key) {
@@ -86,11 +99,12 @@
         return blob.map((item) => item.el);
       }
 
-      async function replaceParentItems(parent, items) {
-        // clear parent
-        while (parent.firstChild) {
-          parent.removeChild(parent.lastChild);
-        }
+      // append items to page.
+      function insertItems(parent, items) {
+        // // clear parent
+        // while (parent.firstChild) {
+        //   parent.removeChild(parent.lastChild);
+        // }
         // add items back
         items.forEach((item) => {
           parent.appendChild(item);
@@ -116,7 +130,40 @@
         // return tempKeyword;
       }
 
-      function extractListingFromItem(el) {
+      function extractListingFromItem(elTemp) {
+        // clone node so original results still show.
+        const el = elTemp.cloneNode(true);
+        // remove classes to prevent dynamic reloads of content.
+        el.className = '';
+        const wrapper = el.querySelector('div span > div > div.a-section');
+        // wrapper could be null.
+        if (wrapper) {
+          let parent = wrapper;
+          // if children.length === 1, children are nested in a div.
+          if (wrapper.childNodes.length === 1) parent = wrapper.querySelector('div');
+          parent.style.display = 'flex';
+          parent.style.position = 'relative';
+          const childNodes = parent.childNodes;
+          // if more than 2 children, 'best seller' is first childNode.
+          if (childNodes.length > 2) {
+            childNodes.forEach((el, i) => {
+              if (i === 0) {
+                el.style.flexBasis = 'min-content';
+                el.style.position = 'absolute';
+                el.style.top = '0';
+                el.style.left = '0';
+              }
+              if (i === 1) el.style.flex = '0 0 25%';
+              if (i === 2) el.style.flexBasis = 'auto';
+            });
+          } else {
+            childNodes.forEach((el, i) => {
+              if (i === 0) el.style.flex = '0 0 25%';
+              if (i === 1) el.style.flexBasis = 'auto';
+            });
+          }
+        }
+
         // Title
         const title = el.querySelector('h2')?.innerText?.trim()?.toLowerCase();
         // Price
@@ -140,6 +187,8 @@
         // Hidden ad's have no 'data-component-id'
         if (el.classList.contains('AdHolder')) isValid = false;
         // price and pricePerCount is in hundreds.
+        // const dEl = document.createElement('div');
+        // dEl.appendChild(el.cloneNode(true));
         return {
           el,
           title,
@@ -175,14 +224,41 @@
       }
 
       // VIEW -------------------------------------------------------------------------
+      function sortResultsBox() {
+        const sortResultsEl = document.createElement('div');
+        sortResultsEl.id = 'sortResultsDiv';
+        // sortResultsEl.style.marginBottom = '2rem';
+        return sortResultsEl;
+      }
       function finalResultEl(arr) {
         const totalResultsEl = document.createElement('div');
         totalResultsEl.style.marginBottom = '2rem';
+        totalResultsEl.style.marginTop = '2rem';
+        totalResultsEl.style.textAlign = 'center';
         const totalResultsP = document.createElement('p');
         totalResultsP.innerText = `Total Search Result: ${arr.length}`;
         totalResultsP.className = 'filterResults';
         totalResultsEl.appendChild(totalResultsP);
         return totalResultsEl;
+      }
+      function endMessage() {
+        const endMessageDiv = document.createElement('div');
+        // create end message.
+        const P1 = document.createElement('p');
+        P1.className = 'amazon-sort-end-message';
+        P1.innerText = 'End Amazon Sort Results';
+        endMessageDiv.appendChild(P1);
+        // show refresh message
+        const P2 = document.createElement('p');
+        P2.className = 'amazon-sort-end-message';
+        P2.innerText = 'Refresh Page or Search Again to Start Over';
+        endMessageDiv.appendChild(P2);
+        // Show original results
+        const P3 = document.createElement('p');
+        P3.className = 'amazon-sort-end-message';
+        P3.innerText = 'Original Amazon Page Results 👇';
+        endMessageDiv.appendChild(P3);
+        return endMessageDiv;
       }
       // Display the page currently loading.
       function loopText() {
@@ -485,6 +561,15 @@
         color: rgba(0, 0, 0, 0.2) !important;
         margin: 0 !important;
       }
+      .amazon-sort-end-message {
+        font-size: 3rem !important;
+        color: var(--amazon-sort-btn-background-hover) !important;
+        font-weight: bold !important;
+        text-align: center !important;
+        margin-top: 6rem !important;
+        margin-bottom: 6rem !important;
+      }
+
           `;
         style.appendChild(document.createTextNode(css));
         return head;
