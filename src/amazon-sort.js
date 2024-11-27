@@ -147,9 +147,13 @@
           }
         } // end childNode styling.
 
-        // Title
-        const title = el.querySelector('h2')?.innerText?.trim()?.toLowerCase();
-        // Price
+        // Title -can be multiple h2.
+        let text = '';
+        el.querySelectorAll('h2').forEach((e) => {
+          if (e) text += e.innerText?.trim()?.toLowerCase() + ' ';
+        });
+        const title = text.trim();
+        // Price -two parts: whole and fraction.
         //    whole
         const whole = el.querySelector('.a-price-whole')?.innerText?.replace('\n.', '') ?? '0';
         //    fraction
@@ -222,23 +226,39 @@
         return totalResultsEl;
       }
       function getFooter() {
-        const endMessageDiv = document.createElement('div');
+        const footerDiv = document.createElement('div');
         // create end message.
         const P1 = document.createElement('p');
         P1.className = 'amazon-sort-end-message';
         P1.innerText = 'End Amazon Sort Results';
-        endMessageDiv.appendChild(P1);
-        // show refresh message
-        const P2 = document.createElement('p');
-        P2.className = 'amazon-sort-end-message';
-        P2.innerText = 'Refresh Page or Search Again to Start Over';
-        endMessageDiv.appendChild(P2);
-        // Show original results
+        footerDiv.appendChild(P1);
+
+        // buttons wrapper div
+        const btnWrapper = document.createElement('div');
+        btnWrapper.style.display = 'flex';
+        btnWrapper.style.justifyContent = 'center';
+        // Create 'Go to top 👆' button.
+        btnWrapper.appendChild(
+          getFooterButton('Go to top 👆', () => window.scrollTo({ top: 0, behavior: 'smooth' }))
+        );
+        // Add buttons to footer
+        footerDiv.appendChild(btnWrapper);
+
+        // original Amazon Page message.
         const P3 = document.createElement('p');
         P3.className = 'amazon-sort-end-message';
         P3.innerText = 'Original Amazon Page Results 👇';
-        endMessageDiv.appendChild(P3);
-        return endMessageDiv;
+        footerDiv.appendChild(P3);
+        return footerDiv;
+      }
+      // footer button.
+      function getFooterButton(text, fn) {
+        const btn = document.createElement('button');
+        btn.className = 'amazon-sort-btn';
+        btn.onclick = fn;
+        btn.innerText = text;
+        btn.style.flex = '0 0 50%';
+        return btn;
       }
       // Display the page currently loading.
       function loopText() {
