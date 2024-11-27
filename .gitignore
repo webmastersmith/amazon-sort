@@ -17,3 +17,4 @@ logs
 npm-debug.log*
 pnpm*
 amazon-backup
+*.html
