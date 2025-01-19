@@ -75,35 +75,28 @@
       loadingPageWrapper.remove();
 
       // START showing items ---------------------
-      // Sort Items.
-      const sortedItems = itemFilterSort(items, filterTitle, sortByPricePerCount);
-
       // Create 'Container' div to insert results.
       const containerDiv = createContainer();
       // Because Amazon dynamically removes/inserts results, div is placed out of Amazon scope.
       mainTopDiv.before(containerDiv);
-      // Create 'Total Search Result' element.
-      const headerText = createHeader(sortedItems.length);
 
       // After Search Results FILTER CHECKBOX ---------------------
       const [filterCheckbox, filterInput] = createCheckbox('FILTER RESULTS?');
       console.log('filterTitle', filterTitle);
       filterInput.checked = filterTitle; // set initial state.
-      // add event listener to change
       filterInput.addEventListener('change', filterAll);
-      // filterCheckbox.style = 'justify-content: center';
+
       // After Search Results SORT CHECKBOX. --------------------------
       const [sortCheckbox, sortInput] = createCheckbox('SORT BY COUNT?');
       console.log('sortByPricePerCount', sortByPricePerCount);
       sortInput.checked = sortByPricePerCount; // set initial state.
-      // append after search results.
-      // add event listener to change
       sortInput.addEventListener('change', sortByCount);
-      // sortCheckbox.style = 'justify-content: center';
+      // Append to div
       const filterSortDiv = document.createElement('div');
       filterSortDiv.style =
         'display: flex; justify-content: center; gap: 4rem; margin-top: -1rem; margin-bottom: 1rem;';
       filterSortDiv.append(filterCheckbox, sortCheckbox);
+
       // Filter Event Listener.
       function filterAll(e) {
         const filtered = itemFilterSort(items, e.target.checked, sortInput.checked);
@@ -118,8 +111,11 @@
       }
 
       // Create Initial View ----------------------
+      // Sort Items.
+      const sortedItems = itemFilterSort(items, filterTitle, sortByPricePerCount);
+      // Create 'Total Search Result' element.
+      const headerText = createHeader(sortedItems.length);
       // Add header and items.
-      // filterItems
       containerDiv.append(headerText, filterSortDiv, ...sortedItems);
       // Add footer.
       containerDiv.after(getFooter());
