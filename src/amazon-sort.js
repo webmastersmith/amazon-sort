@@ -28,7 +28,7 @@
       // All Valid Items HERE.
       const items = [];
       // Get values from the form.
-      const filterTitle = checkboxFilter.checked; // checked = true // filter results.
+      const filterTitle = checkboxFilter.checked; // checked = true // filter results text.
       const pages = +searchInput.value || 5;
       const sortByPricePerCount = checkboxSort.checked;
       // remove form from page after submit.
@@ -80,34 +80,24 @@
       // Because Amazon dynamically removes/inserts results, div is placed out of Amazon scope.
       mainTopDiv.before(containerDiv);
 
-      // After Search Results FILTER CHECKBOX ---------------------
+      // FILTER CHECKBOX ---------------------
       const [filterCheckbox, filterInput] = createCheckbox('FILTER RESULTS?');
-      console.log('filterTitle', filterTitle);
       filterInput.checked = filterTitle; // set initial state.
-      filterInput.addEventListener('change', filterAll);
-
-      // After Search Results SORT CHECKBOX. --------------------------
+      filterInput.addEventListener('change', filterSortEvent);
+      // SORT CHECKBOX. --------------------------
       const [sortCheckbox, sortInput] = createCheckbox('SORT BY COUNT?');
-      console.log('sortByPricePerCount', sortByPricePerCount);
       sortInput.checked = sortByPricePerCount; // set initial state.
-      sortInput.addEventListener('change', sortByCount);
+      sortInput.addEventListener('change', filterSortEvent);
       // Append to div
       const filterSortDiv = document.createElement('div');
       filterSortDiv.style =
         'display: flex; justify-content: center; gap: 4rem; margin-top: -1rem; margin-bottom: 1rem;';
       filterSortDiv.append(filterCheckbox, sortCheckbox);
-
       // Filter Event Listener.
-      function filterAll(e) {
-        const filtered = itemFilterSort(items, e.target.checked, sortInput.checked);
+      function filterSortEvent(e) {
+        const filtered = itemFilterSort(items, filterInput.checked, sortInput.checked);
         const headerText = createHeader(filtered.length);
         containerDiv.replaceChildren(headerText, filterSortDiv, ...filtered);
-      }
-      // Sort Event Listener.
-      function sortByCount(e) {
-        const sortedItems = itemFilterSort(items, filterInput.checked, e.target.checked);
-        const headerText = createHeader(sortedItems.length);
-        containerDiv.replaceChildren(headerText, filterSortDiv, ...sortedItems);
       }
 
       // Create Initial View ----------------------
@@ -121,19 +111,19 @@
       containerDiv.after(getFooter());
 
       // FUNCTIONS ----------------------------------------------------------------------------
-      function itemFilterSort(items, isFilter, isPricePerCount) {
-        const filtered = filterItems(items.flat(), isFilter);
-        const key = isPricePerCount ? 'pricePerCount' : 'price';
-        const blob = filtered.toSorted((a, b) => a[key] - b[key]);
-        return blob.map((item) => item.el);
-      }
-
       // Get page items, filter 'isValid'.
       function getItems() {
         // keywords and item.title have all been lowerCased.
         return [...document.querySelectorAll('div[class*=main-slot] div[data-uuid]')]
           .map((item) => extractListingFromItem(item)) // process each item.
           .filter((item) => item.isValid);
+      }
+      // return filtered and sorted items.
+      function itemFilterSort(items, isFilter, isPricePerCount) {
+        const filtered = filterItems(items.flat(), isFilter);
+        const key = isPricePerCount ? 'pricePerCount' : 'price';
+        const blob = filtered.toSorted((a, b) => a[key] - b[key]);
+        return blob.map((item) => item.el);
       }
       // filter if name matches.
       function filterItems(items, isFilter = false) {
@@ -156,12 +146,12 @@
           // ChildNodes can be 1, 2, or 3 children.
           // if children.length === 1, children are nested in a div.
           if (wrapper.childNodes.length === 1) parent = wrapper.querySelector('div');
-          parent.style.display = 'flex';
-          parent.style.position = 'relative';
+          parent.style = 'display: flex; position: relative;';
           const childNodes = parent.childNodes;
           // if more than 2 children, 'best seller' is first childNode.
           if (childNodes.length > 2) {
             childNodes.forEach((el, i) => {
+              if (!(el instanceof HTMLElement)) return; // prevent error when 'el' is not Node.
               if (i === 0) {
                 el.style.flexBasis = 'min-content';
                 el.style.position = 'absolute';
@@ -187,7 +177,7 @@
         const title = text.trim();
         // Price -two parts: whole and fraction.
         //    whole
-        const whole = el.querySelector('.a-price-whole')?.innerText?.replace('\n.', '') ?? '0';
+        const whole = el.querySelector('.a-price-whole')?.innerText ?? '0';
         //    fraction
         const fraction = el.querySelector('.a-price-fraction')?.innerText ?? '00';
         // fix price and attach to el.
@@ -204,7 +194,7 @@
         // check if pricePerCount is NaN or 'List Price'.
         pricePerCount = Number.isNaN(pricePerCount) ? price : isListPrice ? price : pricePerCount;
 
-        // attache to el.
+        // attache to el. -only done to verify correct pricing.
         el.setAttribute('data-as-price-per-count', pricePerCount);
         el.setAttribute('data-as-price', price);
 
@@ -216,6 +206,7 @@
         if (el.style.display === 'none') isValid = false;
         // Hidden ad's have no 'data-component-id'
         if (el.classList.contains('AdHolder')) isValid = false;
+
         return {
           el,
           title,
@@ -352,8 +343,7 @@
       checkboxLabel.className = 'amazon-sort-checkbox-label';
       checkboxLabel.innerText = msg;
       // build checkbox sort
-      checkboxDiv.append(checkbox);
-      checkboxDiv.append(checkboxLabel);
+      checkboxDiv.append(checkbox, checkboxLabel);
       return [checkboxDiv, checkbox];
     }
 
